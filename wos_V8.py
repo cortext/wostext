@@ -3,7 +3,7 @@
 """WOS.
 Description:
 
-Medline Extractor
+Web Of Science Extractor
 
 Usage:
 	wos.py <query> [--o=<filename>] [(--u=<username> --p=<passwd>)] [-v] [-s]
@@ -117,7 +117,7 @@ class Session():
 		'''access to WOS website'''
 		#print "connecting to", self.url
 		# xephyr=Display(visible=0, size=(640, 480)).start()
-		ENTER_PAGE = "https://apps-webofknowledge-com.fennec.u-pem.fr/MEDLINE_AdvancedSearch_input.do?&product=MEDLINE&search_mode=AdvancedSearch"
+		ENTER_PAGE = "https://apps-webofknowledge-com.fennec.u-pem.fr/WOS_AdvancedSearch_input.do?&product=WOS&search_mode=AdvancedSearch"
 		self.url = ENTER_PAGE
 		b = spynner.Browser()
 		b.set_html_parser(PyQuery)
@@ -150,7 +150,7 @@ class Session():
 		if "SessionError" in self.session.url :
 			self.session.click('a[target="_top"]')
 			self.debug(on=True)
-		self.session.wait(1)
+		self.session.wait(random.uniform(1, 3))
 		self.parse_params()
 		try:
 			self.ssid = self.dict_params['SID']
@@ -161,6 +161,7 @@ class Session():
 			self.parse_params()
 			try:
 				self.ssid = self.dict_params['SID']
+				print self.ssid
 				return True
 			except Exception:
 				print "Error Accessing Authentication Key SID"	
@@ -170,17 +171,20 @@ class Session():
 	def query(self):
 		'''define advanced or basic search'''
 		if self.debug_opt is True:
-			print "Searching into Medline..."
+			print "Searching into WOS..."
 
 		if "SessionError" in self.url :
 			print "Error", b.url
-			#~ b.click('a[target="_top"]')
-			#~ self.session.wait(random.randint(2,5))
-			sys.exit('Error in query format')
+			b.click('a[target="_top"]')
+			self.session.wait(random.randint(2,5))
 			
-		#print "Query"
-		self.store_cookies()
-		self.adv_search()
+		if self.basic is False:
+			#print "Query"
+			self.store_cookies()
+			self.adv_search()
+		else:
+			self.store_cookies()
+			self.basic_search()
 		return self
 
 	def adv_search(self):
@@ -188,74 +192,86 @@ class Session():
 
 		if self.debug_opt is True:
 			print "Launching advanced search"
-		self.url = "https://"+self.p_netloc+"/MEDLINE_AdvancedSearch_input.do?SID=%s&product=MEDLINE&search_mode=AdvancedSearch" %self.ssid
+		self.url = "https://"+self.p_netloc+"/WOS_AdvancedSearch_input.do?SID=%s&product=WOS&search_mode=AdvancedSearch" %self.ssid
 		self.session.load(self.url)
-		#self.debug()
+		self.debug()
 		#filling the advanced form
-		self.session.wait(1)
+		self.session.wait(random.randint(2,5))
 		self.session.wk_fill('textarea[id="value(input1)"]', self.query_arg)
 		self.session.click('input[title="Search"]')
-		self.session.wait(2)
+		self.session.wait(random.randint(2,5))
 		self.session.click('a[title="Click to view the results"]',wait_load=True)
+		#self.session.wait(random.randint(7,8))
+		self.debug()
 		self.parse_params()
+		try:
+			
+			self.qid = self.dict_params['qid']
+			self.max = self.resultsCount()
+			print "Nombre de résultats :", self.max
+			return self
+		except KeyError:
+			#print "no qid"
+			#print BeautifulSoup(self.session.html.encode("utf-8"))
+			try:
+				print BeautifulSoup(self.session.html.encode("utf-8").find("div", {"id":"client_error_input_message"}).text)
+			except:
+				self.qid = 1
+			self.debug(on=True)
+			
+			print "Search Error!. \nFormatting your query for basic search..."
+			#Reformating query
+			# self.query = self.format(self.query)
+			# print "Query is now:", self.query
+			
+			# try:
+			# 	self.advanced_search()
+			# except Exception, e:
+			# 	print "Search Error!. \nCheck your query.%s" %e
+			# 	self.debug(on=True) 
+			return self
+		
+	def basic_search(self):
+		'''Generating basic search'''
+		#Filling the basic search form
+		if self.debug_opt is True:
+			print "Lauching basic search"
+		self.session.select('input[id="value(input1)"]')
+		self.session.wk_fill('input[id="value(input1)"]', self.query)
+		self.session.click('input[id="WOS_GeneralSearch_input_form_sb"]')
+		self.session.wait(random.randint(0,10))
+		self.results = self.resultsCount()
+		self.debug()
 		try:
 			self.qid = self.dict_params['qid']
 			self.max = self.resultsCount()
 			print "Nombre de résultats :", self.max
 			return self
 		except KeyError:
-			try:
-				print BeautifulSoup(self.session.html.encode("utf-8")).text
-				print BeautifulSoup(self.session.html.encode("utf-8").find({"id":"client_error_input_message"}))
-				print BeautifulSoup(self.session.html.encode("utf-8").find("div", {"id":"client_error_input_message"}).text)
-				return sys.exit("Search Error!. \nCheck your query...")
-			except:
-				self.debug()
-				self.qid = 1
-				self.max = 30877
-				return self
-			
-	def __build__(self, markFrom, markTo, r_url):
-		print markFrom, markTo
-		data = {
-				'SID': self.ssid,
-				'colName':'MEDLINE',
-				'count_new_items_marked':0,
-				'displayCitedRefs':'true',
-				'displayTimesCited':'true',
-				'fields_selection': 'USAGEIND AUTHORSIDENTIFIERS SUBJECT_CATEGORY COMMENTS_NOTES NAME_SUBJECT_MISSION RECORD_OWNER CHEMICAL_AND_GENE_DATA ACCESSION_NUM NUM_OF_REF INVESTIGATORS KEYWORDS_CITATION_SUBSET ISSN GRANT_INFO LANGUAGE MESH_TERMS PROCESSING_DATES PUB_TYPE ADDRESSES ABSTRACT SOURCE TITLE AUTHORS',
-				'filters':'USAGEIND AUTHORSIDENTIFIERS SUBJECT_CATEGORY COMMENTS_NOTES NAME_SUBJECT_MISSION RECORD_OWNER CHEMICAL_AND_GENE_DATA ACCESSION_NUM NUM_OF_REF INVESTIGATORS KEYWORDS_CITATION_SUBSET ISSN GRANT_INFO LANGUAGE MESH_TERMS PROCESSING_DATES PUB_TYPE ADDRESSES ABSTRACT SOURCE TITLE AUTHORS',  
-				'format':'saveToFile',
-				'locale':'en_US',
-				'mark_from':str(markFrom),
-				'mark_to':str(markTo),
-				'mark_id':'MEDLINE',
-				'mode':'OpenOutputService',
-				'product':'MEDLINE',
-				'qid':self.qid,
-				'queryNatural': self.query_arg,
-				'rurl':urllib.quote_plus(r_url),
-				'save_options':'othersoftware',
-				'search_mode':'AdvancedSearch',
-				'selectedIds':'',
-				'sortBy':'PY.D;LD.D;SO.A;VL.D;PG.A;AU.A',
-				'value(record_select_type)':'range',
-				'viewType':'summary',
-				'view_name':'MEDLINE-summary',
-				}
-		return data
-		
+			#print "no qid"
+			print "Search Error!. \nCheck your query."
+			self.debug(on=True)
+			return sys.exit()
+		return self
+
 	def export(self, markFrom, markTo):
-		'''Export method: writing to a txt file '''
-		
+
+		'''Export method: writing to a txt file'''
 		if self.debug_opt is True:
 			print "Exporting to %s" %self.local_filename
-		print "exporting records from %d to %d"%(markFrom, markTo)
-		r_url = "https://apps-webofknowledge-com.fennec.u-pem.fr/summary.do?product=MEDLINE&doc=1&qid=%s&SID=%s&search_mode=AdvancedSearch" %(self.qid, str(self.ssid))
-		data = self.__build__(markFrom, markTo, r_url)
-		print data['mark_from'], data['mark_to']
-		
+		#print "exporting"
+		#p_url0= "http://apps.webofknowledge.com/AutoSave_UA_output.do?action=saveForm&SID=%s&product=UA&search_mode=output" %self.ssid
+		#r0 = requests.post(p_url0, headers= headers, cookies=self.cookies)
+		# print p_url0
+		#print r0
+		#p_url1= "http://apps.webofknowledge.com/AutoSave_UA_output.do?action=saveForm&SID=%s&product=UA&search_mode=results" %self.ssid
+		# print p_url1
+		#r1 = requests.post(p_url1, headers= headers, cookies=self.cookies)
+		#print r1
+		r_url = "https://apps-webofknowledge-com.fennec.u-pem.fr/summary.do?product=WOS&doc=1&qid="+self.qid+"&SID="+self.ssid+"&search_mode=AdvancedSearch"
 		post_url = "https://apps-webofknowledge-com.fennec.u-pem.fr/OutboundService.do?action=go&&"
+		#r2 = requests.post()
+		
 		header={
 				'Host': 'apps-webofknowledge-com.fennec.u-pem.fr', 
 				'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:29.0) Gecko/20100101 Firefox/29.0',
@@ -263,12 +279,40 @@ class Session():
 				'Accept-Language': 'fr,fr-fr;q=0.8,en-us;q=0.5,en;q=0.3',
 				'Accept-Encoding': 'gzip, deflate',
 				'DNT': 1,
-				'Referer': 'https://apps-webofknowledge-com.fennec.u-pem.fr/summary.do?product=MEDLINE&doc=1&qid=%s&SID=%s&search_mode=AdvancedSearch'%(self.qid, self.ssid),
+				'Referer': 'https://apps-webofknowledge-com.fennec.u-pem.fr/summary.do?product=WOS&doc=1&qid=%s&SID=%s&search_mode=AdvancedSearch'%(self.qid, self.ssid),
 				'Connection': 'keep-alive'
 				}
 
-		
-				
+		# markTo = 500
+		# markFrom = 1
+		data = {
+				'SID': self.ssid,
+				'colName':'WOS',
+				'count_new_items_marked':0,
+				'displayCitedRefs':'true',
+				'displayTimesCited':'true',
+				'fields_selection':'USAGEIND AUTHORSIDENTIFIERS ACCESSION_NUM FUNDING SUBJECT_CATEGORY JCR_CATEGORY LANG IDS PAGEC SABBR CITREFC ISSN PUBINFO KEYWORDS CITTIMES ADDRS CONFERENCE_SPONSORS DOCTYPE CITREF ABSTRACT CONFERENCE_INFO SOURCE TITLE AUTHORS',
+				'filters':'USAGEIND AUTHORSIDENTIFIERS ACCESSION_NUM FUNDING SUBJECT_CATEGORY JCR_CATEGORY LANG IDS PAGEC SABBR CITREFC ISSN PUBINFO KEYWORDS CITTIMES ADDRS CONFERENCE_SPONSORS DOCTYPE CITREF ABSTRACT CONFERENCE_INFO SOURCE TITLE AUTHORS',  
+				'format':'saveToFile',
+				'locale':'en_US',
+				'markFrom':1,
+				'markTo':markTo,
+				'mark_from':markFrom,
+				'mark_id':'WOS',
+				'mark_to':markTo,
+				'mode':'OpenOutputService',
+				'product':'WOS',
+				'qid':self.qid,
+				#rurl:'http%3A%2F%2Fapps.webofknowledge.com%2Fsummary.do%3FSID%3DT1WYtnvIngPkHzI4ShI%26product%3DWOS%26doc%3D1%26qid%3D1%26search_mode%3DAd
+				'rurl':urllib.quote_plus(r_url),
+				'save_options':'othersoftware',
+				'search_mode':'AdvancedSearch',
+				'selectedIds':'',
+				'sortBy':'PY.D;LD.D;SO.A;VL.D;PG.A;AU.A',
+				'value(record_select_type)':'range',
+				'viewType':'summary',
+				'view_name':'WOS-summary',
+				}
 		print '\b===',
 		sys.stdout.flush()
 		r = requests.get(post_url, params=data,headers=header, cookies=self.cookies)
@@ -276,8 +320,6 @@ class Session():
 		print '\b===',
 		sys.stdout.flush()
 		final_r = requests.get(r.url, cookies=self.cookies, stream=True)
-		if (final_r.text).startswith('<!DOCTYPE html>'):
-			final_r.text = re.sub('\<\!DOCTYPE\shtml\>.*?\<\/html\>', "", final_r.text)
 		print '\b===',
 		sys.stdout.flush()
 		#self.local_filename = "./wos_saved-recs.txt"
@@ -297,44 +339,79 @@ def wos_extract(docopt_args):
 	
 	s = Session(docopt_args)
 	start_time = time.time()
-	print "Connecting to Medline..."
+	print "Connecting to WOS..."
 	c = s.connect()
 	if c:
 		print "Authentication ..."
 		if s.authenticate():
 			print "Send query ..."
-			s.store_cookies()
-			if s.adv_search():
-				
+			if s.query():
 				open(s.local_filename, 'w').close()
-				s.export(0,500)
-				l = list(range(500, s.max, 500))
+				l = list(range(0, s.max, 500))
+
 				l.append(s.max)
 				print "Exporting ..."
-				for nb,count in enumerate(l):
-					if count < max:
-						try:
-							s.export(count+1, l[nb+1])
-						except:
-							pass
+				
+				for i,n in enumerate(l):
+					
+					if l[i]+1 < s.max:
+						s.export(l[i]+1, l[i+1])
 						print '\b==\b',
 						sys.stdout.flush()
+					# if n%10 == 1:
+					# 	time.sleep(10)
 				print "\n"
 				total = time.time() - start_time, "seconds"
-				raw_file = open(s.local_filename, 'r')
+				raw_file = open('testsocio.txt', 'r')
 				raw_file_data = raw_file.read().decode("utf-8-sig").encode("utf-8")
-				nb_occurence = raw_file_data.count("UT MEDLINE:")
+				nb_occurence = len(raw_file_data.split("\n\n"))-1
 				print "Query %s had %d results: %d exported" %(s.query_arg, s.max, nb_occurence)
 				print "sucessfully stored in file : %s\n" %(s.local_filename)
-				print "Execution total time:", total[0], "seconds"			
+				print "Execution total time:", total[0], "seconds"
+				
 				sys.exit(0)
 	else:
-		sys.exit("Error connecting ENTER_PAGE. Please check out your connexion and try again")
+		print "Error connecting ENTER_PAGE. Please check out your connexion and try again"
+		sys.exit(1)
 
-
+import time
+def medline_ref(filename):
+	refs = []
+	with open(filename,'r') as f:
+		for n in f.readlines():
+			n = re.sub("\n", "", n)
+			n = re.sub("\s", "=", n)
+			refs.append(n)
+	max_ref = len(refs)
+	counter = [ x for x in range(0, max_ref, 99)]
+	counter.append(max_ref)
+	query_list = []
+	for i,n in enumerate(counter):		
+		try:
+			query_list.append("("+") OR (".join(refs[n:counter[i+1]])+")")
+		except IndexError:
+			pass
+	return query_list
+		
+	
+	
+def main(query):
+	args = dict()
+	args["<query>"] = query
+	args['--u'] = None
+	args['--p'] = None
+	args['-v'] = False
+	args['-s'] = False
+	args["--o"] = re.sub(query, '^[a-Z0-9]|\s', "_")+".txt"
+	wos_extract(args)
+	
+	
 
 if __name__ == "__main__":
-	wos_extract(docopt(__doc__))
+	for n in medline_ref("./UT.txt"):
+		main(n)
+		time.sleep(30)
+	#wos_extract(docopt(__doc__))
 	#wos(docopt(__doc__, version='0.2'))
 	sys.exit()
 
