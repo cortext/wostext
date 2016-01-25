@@ -15,8 +15,8 @@ Full code source is inside wos.py
 WOS has to been called at the end of the file such as :
 
 
-```
-    code: python
+```python
+    
     if __name__=="__main__":
         WOS(
             query='TS=(complexity OR "complex system*")', 
