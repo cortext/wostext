@@ -13,8 +13,7 @@ import requests, urllib
 from urlparse import urlparse
 from bs4 import BeautifulSoup
 from splinter import Browser
-#~ import spynner
-#~ from pyquery import PyQuery
+
 #from docopt import docopt
 #from pyvirtualdisplay import Display
 
@@ -31,10 +30,7 @@ class WOS(object):
         #defining params
         self.query = kwargs["query"]
         self.outfile = kwargs["outfile"]+".isi"
-        try:
-            self.product = kwargs["product"]
-        except:
-            self.product = "WOS"
+        
         try:
             self.user=kwargs["user"]
             self.passw = kwargs["passw"]
@@ -45,16 +41,15 @@ class WOS(object):
         except:
             self.browser_app = "splinter"
         #using MLV Auth Server
-        
-        self.auth_url = "https://apps-webofknowledge-com.fennec.u-pem.fr/%s_AdvancedSearch_input.do?&product=WOS&search_mode=AdvancedSearch" %self.product
-        print self.auth_url
+        self.auth_url = "https://apps-webofknowledge-com.fennec.u-pem.fr/WOS_AdvancedSearch_input.do?&product=WOS&search_mode=AdvancedSearch"
         #Firefox Browser
         if self.browser_app == "splinter":
-            self.browser = Browser()
+            self.browser = Browser("firefox")
         else:
             self.browser = spynner.Browser()
             self.browser.set_html_parser(PyQuery)
         
+        #self.browser = Browser('zope.testbrowser', ignore_robots=True)
         #Session params
         self.session = None
         self.cookies = {}
@@ -74,7 +69,7 @@ class WOS(object):
             
         if self.user is None and self.passw is None:
             self.user, self.passw = private
-        logging.info("Search parameters:\n\t-product: %s \n\t- query: %s\n\t- outfile: %s\n\t- user: %s\n\t- password: %s" %(self.product, self.query, self.outfile, self.user, self.passw))
+        logging.info("WOS search parameters:\n\t- query: %s\n\t- outfile: %s\n\t- user: %s\n\t- password: %s" %(self.query, self.outfile, self.user, self.passw))
         self.run()
         
     def auth(self):
@@ -101,31 +96,28 @@ class WOS(object):
                 self.session.wait(random.uniform(1, 3))
         
         p_url = urlparse(self.browser.url)
-        print p_url, self.browser.url
         
-        #if p_url.netloc == "apps-webofknowledge-com.fennec.u-pem.fr":
+        if p_url.netloc == "apps-webofknowledge-com.fennec.u-pem.fr":
             #print p_url.scheme+"//"+p_url.netloc+"/WOS_GeneralSearch_input.do?"+p_url.query
-        expr = "product\=%s\&search_mode\=(?P<search_mode>.*?)\&SID=(?P<ssid>.*?)\&preferencesSaved\=" %self.product 
-        print expr
-        match = re.match(re.compile(expr), str(p_url.query))
-        if match is not None:
-            
-            self.ssid = match.group("ssid")
-            self.search_mode = re.sub("General", "Advanced", match.group("search_mode"))
-            #self.search_mode = match.group("search_mode")
-            self.search_url = "%s://%s/%s_%s_input.do?product=%s&search_mode=%s&SID=%s" %(p_url.scheme, p_url.netloc, self.product,self.search_mode,self.product,self.search_mode,self.ssid)        
-            if self.browser_app == "splinter":
-                self.browser.visit(self.search_url)
-                print self.browser.url
+            match = re.match(re.compile("product\=(?P<product>.*?)\&search_mode\=(?P<search_mode>.*?)\&SID=(?P<ssid>.*?)\&preferencesSaved\="), str(p_url.query))
+            if match is not None:
+                self.product = match.group("product")
+                self.ssid = match.group("ssid")
+                self.search_mode = re.sub("General", "Advanced", match.group("search_mode"))
+                #self.search_mode = match.group("search_mode")
+                self.search_url = "%s://%s/%s_%s_input.do?product=%s&search_mode=%s&SID=%s" %(p_url.scheme, p_url.netloc, self.product,self.search_mode,self.product,self.search_mode,self.ssid)        
+                if self.browser_app == "splinter":
+                    self.browser.visit(self.search_url)
+                    print self.browser.url
+                else:
+                    self.browser.load(self.search_url)
+                    print self.browser.url
+                return self
             else:
-                self.browser.load(self.search_url)
-                print self.browser.url
-            return self
+                return sys.exit("Session Id could not be found")    
         else:
-            return sys.exit("Session Id could not be found")    
-        #~ else:
-            #~ logging.info("No redirection to service")
-            #~ return sys.exit("Invalid credentials")
+            logging.info("No redirection to service")
+            return sys.exit("Invalid credentials")
         
     def launch_search(self):
         """ Filling the query form found into advanced search page """
@@ -159,11 +151,11 @@ class WOS(object):
             self.session.click('a[title="Click to view the results"]',wait_load=True)
             
         print urlparse(self.browser.url).query
-        match = re.search(re.compile("product=(?P<product>.*)&doc\=(?P<doc>.*?)\&qid\=(?P<qid>.*?)&SID"), urlparse(self.browser.url).query)        
+        match = re.search(re.compile("product=WOS&doc\=(?P<doc>.*?)\&qid\=(?P<qid>.*?)&SID"), urlparse(self.browser.url).query)        
         if match is not None:
             print match.group()
-            self.product, self.doc, self.qid = match.group("doc"), match.group('qid')
-            print self.product, self.doc, self.qid
+            self.doc, self.qid = match.group("doc"), match.group('qid')
+            print self.doc, self.qid
             return self
         else:
             
@@ -194,12 +186,11 @@ class WOS(object):
                 'Accept-Language': 'fr,fr-fr;q=0.8,en-us;q=0.5,en;q=0.3',
                 'Accept-Encoding': 'gzip, deflate',
                 'DNT': 1,
-                'Referer': 'https://apps-webofknowledge-com.fennec.u-pem.fr/summary.do?product=%s&doc=1&qid=%s&SID=%s&search_mode=AdvancedSearch'%(self.product, self.qid, self.ssid),
+                'Referer': 'https://apps-webofknowledge-com.fennec.u-pem.fr/summary.do?product=WOS&doc=1&qid=%s&SID=%s&search_mode=AdvancedSearch'%(self.qid, self.ssid),
                 'Connection': 'keep-alive'
                 }
         # markTo = 500
         # markFrom = 1
-        view = self.product+"-summary"
         data = {
                 'SID': self.ssid,
                 'colName':'WOS',
@@ -216,7 +207,7 @@ class WOS(object):
                 'product':'WOS',
                 'mark_to':markTo,
                 'mode':'OpenOutputService',
-                'product':self.product,
+                'product':'WOS',
                 'qid':self.qid,
                 'startYear':'2015',
                 'endYear':'2014',
@@ -228,16 +219,28 @@ class WOS(object):
                 'sortBy':'PY.D;LD.D;SO.A;VL.D;PG.A;AU.A',
                 'value(record_select_type)':'range',
                 'viewType':'summary',
-                'view_name':view,
+                'view_name':'WOS-summary',
                 }
         
         
         r = requests.get(post_url, params=data,headers=header, cookies=self.cookies)
         #redirects to #url = "http://ets.webofknowledge.com/ETS/ets.do?"
         
-        
+        data_directory  = self.outfile.split('.isi')[0]
+        try:
+            os.mkdir("exported_data")
+            print "creating directory exported_data"
+        except:
+            print "exported_data already exists"
+            pass
+        try:
+            os.mkdir("exported_data/"+data_directory)
+            print "creating directory "+data_directory
+        except:
+            print data_directory +" already exists"
+            pass
         final_r = requests.get(r.url, cookies=self.cookies, stream=True)
-        with open( self.outfile.split('.isi')[0]+'_'+str(i) +'.isi' , 'w') as f:
+        with open( "exported_data/"+data_directory+'/'+data_directory+'_'+str(i) +'.isi' , 'w') as f:
             final_r.text
             f.write(final_r.text.encode('utf-8'))
         return self.outfile
@@ -245,7 +248,7 @@ class WOS(object):
     def export(self):
         """Writing results into outfile (defaut is normalized query)"""
         start_time = time.time()
-        open(self.outfile, 'w').close()
+        #open(self.outfile, 'w').close()
         l = list(range(0, self.nb_results, 500))
         l.append(self.nb_results)
     
@@ -259,7 +262,7 @@ class WOS(object):
         # raw_file_data = raw_file.read().decode("utf-8-sig").encode("utf-8")
         # nb_occurence = len(raw_file_data.split("\n\n"))-1
         logging.info("Query \"%s\" had %d results: %d has been exported" %(self.query, self.nb_results))
-        logging.info("Sucessfully stored in file : %s\n" %(self.outfile))
+        logging.info("Sucessfully stored in directory : %s\n" %(self.outfile))
         #logging.info("Execution total time:"+str(" ".join(total)))
         return 
         
@@ -274,5 +277,5 @@ class WOS(object):
 
 if __name__=="__main__":
     #WOS(query='TS=(complexity OR "complex system*")',outfile="wos.txt")
-    WOS(query='TS="synthetic biology" AND PY=(2010-2012)',outfile="sbdeuxans")
+    WOS(query='TS="synthetic biology" AND PY=(2002-2004)',outfile="sbdeuxans")
     
