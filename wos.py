@@ -13,8 +13,8 @@ import requests, urllib
 from urlparse import urlparse
 from bs4 import BeautifulSoup
 from splinter import Browser
-import spynner
-from pyquery import PyQuery
+#~ import spynner
+#~ from pyquery import PyQuery
 #from docopt import docopt
 #from pyvirtualdisplay import Display
 
@@ -101,12 +101,14 @@ class WOS(object):
                 self.session.wait(random.uniform(1, 3))
         
         p_url = urlparse(self.browser.url)
-        print p_url
+        
         if p_url.netloc == "apps-webofknowledge-com.fennec.u-pem.fr":
             #print p_url.scheme+"//"+p_url.netloc+"/WOS_GeneralSearch_input.do?"+p_url.query
-            match = re.match(re.compile("product\=(?P<product>.*?)\&search_mode\=(?P<search_mode>.*?)\&SID=(?P<ssid>.*?)\&preferencesSaved\="), str(p_url.query))
+            expr = "product\=%s\&search_mode\=(?P<search_mode>.*?)\&SID=(?P<ssid>.*?)\&preferencesSaved\=" %self.product 
+            print expr
+            match = re.match(re.compile(expr), str(p_url.query))
             if match is not None:
-                self.product = match.group("product")
+                
                 self.ssid = match.group("ssid")
                 self.search_mode = re.sub("General", "Advanced", match.group("search_mode"))
                 #self.search_mode = match.group("search_mode")
