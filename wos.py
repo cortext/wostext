@@ -30,7 +30,10 @@ class WOS(object):
         #defining params
         self.query = kwargs["query"]
         self.outfile = kwargs["outfile"]+".isi"
-        
+        try:
+            self.product = kwargs["product"]
+        except:
+            self.product = "WOS"
         try:
             self.user=kwargs["user"]
             self.passw = kwargs["passw"]
@@ -41,7 +44,7 @@ class WOS(object):
         except:
             self.browser_app = "splinter"
         #using MLV Auth Server
-        self.auth_url = "https://apps-webofknowledge-com.fennec.u-pem.fr/WOS_AdvancedSearch_input.do?&product=WOS&search_mode=AdvancedSearch"
+        self.auth_url = "https://apps-webofknowledge-com.fennec.u-pem.fr/%s_AdvancedSearch_input.do?&product=WOS&search_mode=AdvancedSearch" self.product
         #Firefox Browser
         if self.browser_app == "splinter":
             self.browser = Browser("firefox")
@@ -151,11 +154,11 @@ class WOS(object):
             self.session.click('a[title="Click to view the results"]',wait_load=True)
             
         print urlparse(self.browser.url).query
-        match = re.search(re.compile("product=WOS&doc\=(?P<doc>.*?)\&qid\=(?P<qid>.*?)&SID"), urlparse(self.browser.url).query)        
+        match = re.search(re.compile("product=(?P<product>.*)&doc\=(?P<doc>.*?)\&qid\=(?P<qid>.*?)&SID"), urlparse(self.browser.url).query)        
         if match is not None:
             print match.group()
-            self.doc, self.qid = match.group("doc"), match.group('qid')
-            print self.doc, self.qid
+            self.product, self.doc, self.qid = match.group("doc"), match.group('qid')
+            print self.product, self.doc, self.qid
             return self
         else:
             
@@ -207,7 +210,7 @@ class WOS(object):
                 'product':'WOS',
                 'mark_to':markTo,
                 'mode':'OpenOutputService',
-                'product':'WOS',
+                'product':self.product,
                 'qid':self.qid,
                 'startYear':'2015',
                 'endYear':'2014',
@@ -219,7 +222,7 @@ class WOS(object):
                 'sortBy':'PY.D;LD.D;SO.A;VL.D;PG.A;AU.A',
                 'value(record_select_type)':'range',
                 'viewType':'summary',
-                'view_name':'WOS-summary',
+                'view_name':'%s-summary', %self.product
                 }
         
         
