@@ -103,29 +103,29 @@ class WOS(object):
         p_url = urlparse(self.browser.url)
         print p_url, self.browser.url
         
-        if p_url.netloc == "apps-webofknowledge-com.fennec.u-pem.fr":
+        #if p_url.netloc == "apps-webofknowledge-com.fennec.u-pem.fr":
             #print p_url.scheme+"//"+p_url.netloc+"/WOS_GeneralSearch_input.do?"+p_url.query
-            expr = "product\=%s\&search_mode\=(?P<search_mode>.*?)\&SID=(?P<ssid>.*?)\&preferencesSaved\=" %self.product 
-            print expr
-            match = re.match(re.compile(expr), str(p_url.query))
-            if match is not None:
-                
-                self.ssid = match.group("ssid")
-                self.search_mode = re.sub("General", "Advanced", match.group("search_mode"))
-                #self.search_mode = match.group("search_mode")
-                self.search_url = "%s://%s/%s_%s_input.do?product=%s&search_mode=%s&SID=%s" %(p_url.scheme, p_url.netloc, self.product,self.search_mode,self.product,self.search_mode,self.ssid)        
-                if self.browser_app == "splinter":
-                    self.browser.visit(self.search_url)
-                    print self.browser.url
-                else:
-                    self.browser.load(self.search_url)
-                    print self.browser.url
-                return self
+        expr = "product\=%s\&search_mode\=(?P<search_mode>.*?)\&SID=(?P<ssid>.*?)\&preferencesSaved\=" %self.product 
+        print expr
+        match = re.match(re.compile(expr), str(p_url.query))
+        if match is not None:
+            
+            self.ssid = match.group("ssid")
+            self.search_mode = re.sub("General", "Advanced", match.group("search_mode"))
+            #self.search_mode = match.group("search_mode")
+            self.search_url = "%s://%s/%s_%s_input.do?product=%s&search_mode=%s&SID=%s" %(p_url.scheme, p_url.netloc, self.product,self.search_mode,self.product,self.search_mode,self.ssid)        
+            if self.browser_app == "splinter":
+                self.browser.visit(self.search_url)
+                print self.browser.url
             else:
-                return sys.exit("Session Id could not be found")    
+                self.browser.load(self.search_url)
+                print self.browser.url
+            return self
         else:
-            logging.info("No redirection to service")
-            return sys.exit("Invalid credentials")
+            return sys.exit("Session Id could not be found")    
+        #~ else:
+            #~ logging.info("No redirection to service")
+            #~ return sys.exit("Invalid credentials")
         
     def launch_search(self):
         """ Filling the query form found into advanced search page """
