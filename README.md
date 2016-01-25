@@ -2,7 +2,7 @@
 
 ##Install
 
-```
+```bash
 git clone wostext
 cd wostext
 pip install -r requirements.pip
