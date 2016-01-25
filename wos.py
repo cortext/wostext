@@ -44,7 +44,7 @@ class WOS(object):
         except:
             self.browser_app = "splinter"
         #using MLV Auth Server
-        self.auth_url = "https://apps-webofknowledge-com.fennec.u-pem.fr/%s_AdvancedSearch_input.do?&product=WOS&search_mode=AdvancedSearch" self.product
+        self.auth_url = "https://apps-webofknowledge-com.fennec.u-pem.fr/%s_AdvancedSearch_input.do?&product=WOS&search_mode=AdvancedSearch" %self.product
         #Firefox Browser
         if self.browser_app == "splinter":
             self.browser = Browser("firefox")
@@ -194,6 +194,7 @@ class WOS(object):
                 }
         # markTo = 500
         # markFrom = 1
+        view = self.product+"-summary"
         data = {
                 'SID': self.ssid,
                 'colName':'WOS',
@@ -222,7 +223,7 @@ class WOS(object):
                 'sortBy':'PY.D;LD.D;SO.A;VL.D;PG.A;AU.A',
                 'value(record_select_type)':'range',
                 'viewType':'summary',
-                'view_name':'%s-summary', %self.product
+                'view_name':view,
                 }
         
         
