@@ -101,6 +101,7 @@ class WOS(object):
                 self.session.wait(random.uniform(1, 3))
         
         p_url = urlparse(self.browser.url)
+        print p_url, self.browser.url
         
         if p_url.netloc == "apps-webofknowledge-com.fennec.u-pem.fr":
             #print p_url.scheme+"//"+p_url.netloc+"/WOS_GeneralSearch_input.do?"+p_url.query
