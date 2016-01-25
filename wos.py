@@ -1,4 +1,4 @@
-#!/usr/bin/env python 2.7
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import logging
@@ -12,25 +12,24 @@ import random, time
 import requests, urllib
 from urlparse import urlparse
 from bs4 import BeautifulSoup
-#~ from splinter import Browser
-#~ from  pyquery import PyQuery
-#~ import spynner
+from splinter import Browser
+
 #from docopt import docopt
-#~ from pyvirtualdisplay import Display
+#from pyvirtualdisplay import Display
 
 
 class WOS(object):
     """ A little module for exporting Web of Science search results into a txt file """
     def __init__(self, **kwargs):
         """
-        Construct a new WOS object given a query, an export file (without ".txt")
+        Construct a new WOS object given a query, an export file (without ".isi")
         a username and a password for authentication
         eg :
             WOS(query="TS=(epigenetic*", outfile="epigenetic", user="myuser", passw="mypassw")
         """
         #defining params
         self.query = kwargs["query"]
-        self.outfile = kwargs["outfile"]+".txt"
+        self.outfile = kwargs["outfile"]+".isi"
         
         try:
             self.user=kwargs["user"]
@@ -66,7 +65,7 @@ class WOS(object):
             logging.warning("Syntax is not WOS compliant. Check Query Syntax")
             sys.exit("Query Syntax Error")
         if self.outfile is None:
-            self.outfile = str(re.sub(re.compile("[^0-9a-zA-Z]+"),"_", self.query))+".txt"
+            self.outfile = str(re.sub(re.compile("[^0-9a-zA-Z]+"),"_", self.query))+".isi"
             
         if self.user is None and self.passw is None:
             self.user, self.passw = private
@@ -164,7 +163,7 @@ class WOS(object):
             return self
             
     
-    def load_results(self, markFrom, markTo):
+    def load_results(self, markFrom, markTo, i):
         """ Load_results(markFrom, markTo) 500 by 500 given the nb of results """
         logging.info("loading results")
         #print "exporting"
@@ -190,7 +189,6 @@ class WOS(object):
                 'Referer': 'https://apps-webofknowledge-com.fennec.u-pem.fr/summary.do?product=WOS&doc=1&qid=%s&SID=%s&search_mode=AdvancedSearch'%(self.qid, self.ssid),
                 'Connection': 'keep-alive'
                 }
-
         # markTo = 500
         # markFrom = 1
         data = {
@@ -206,11 +204,13 @@ class WOS(object):
                 'markFrom':1,
                 'markTo':markTo,
                 'mark_from':markFrom,
-                'mark_id':'WOS',
+                'product':'WOS',
                 'mark_to':markTo,
                 'mode':'OpenOutputService',
                 'product':'WOS',
                 'qid':self.qid,
+                'startYear':'2015',
+                'endYear':'2014',
                 #rurl:'http%3A%2F%2Fapps.webofknowledge.com%2Fsummary.do%3FSID%3DT1WYtnvIngPkHzI4ShI%26product%3DWOS%26doc%3D1%26qid%3D1%26search_mode%3DAd
                 'rurl':urllib.quote_plus(r_url),
                 'save_options':'othersoftware',
@@ -228,7 +228,7 @@ class WOS(object):
         
         
         final_r = requests.get(r.url, cookies=self.cookies, stream=True)
-        with open(self.outfile, 'a') as f:
+        with open( self.outfile.split('.isi')[0]+'_'+str(i) +'.isi' , 'w') as f:
             final_r.text
             f.write(final_r.text.encode('utf-8'))
         return self.outfile
@@ -243,13 +243,13 @@ class WOS(object):
         logging.info("Exporting %s 500 by 500..." %self.nb_results)
         for i,n in enumerate(l):
             if l[i]+1 < self.nb_results:
-                self.load_results(l[i]+1, l[i+1])
+                self.load_results(l[i]+1, l[i+1],str(l[i]+1)+'-'+str(l[i+1]))
         
         total = time.time() - start_time, "seconds"
-        raw_file = open(self.outfile, 'r')
-        raw_file_data = raw_file.read().decode("utf-8-sig").encode("utf-8")
-        nb_occurence = len(raw_file_data.split("\n\n"))-1
-        logging.info("Query \"%s\" had %d results: %d has been exported" %(self.query, self.nb_results, nb_occurence))
+        # raw_file = open(self.outfile, 'r')
+        # raw_file_data = raw_file.read().decode("utf-8-sig").encode("utf-8")
+        # nb_occurence = len(raw_file_data.split("\n\n"))-1
+        logging.info("Query \"%s\" had %d results: %d has been exported" %(self.query, self.nb_results))
         logging.info("Sucessfully stored in file : %s\n" %(self.outfile))
         #logging.info("Execution total time:"+str(" ".join(total)))
         return 
@@ -264,5 +264,6 @@ class WOS(object):
 
 
 if __name__=="__main__":
-    WOS(query='TS=(complexity OR "complex system*")',outfile="wos.txt")
+    #WOS(query='TS=(complexity OR "complex system*")',outfile="wos.txt")
+    WOS(query='TS="synthetic biology" AND PY=(2010-2012)',outfile="sbdeuxans")
     
