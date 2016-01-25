@@ -189,7 +189,7 @@ class WOS(object):
                 'Accept-Language': 'fr,fr-fr;q=0.8,en-us;q=0.5,en;q=0.3',
                 'Accept-Encoding': 'gzip, deflate',
                 'DNT': 1,
-                'Referer': 'https://apps-webofknowledge-com.fennec.u-pem.fr/summary.do?product=WOS&doc=1&qid=%s&SID=%s&search_mode=AdvancedSearch'%(self.qid, self.ssid),
+                'Referer': 'https://apps-webofknowledge-com.fennec.u-pem.fr/summary.do?product=%s&doc=1&qid=%s&SID=%s&search_mode=AdvancedSearch'%(self.product, self.qid, self.ssid),
                 'Connection': 'keep-alive'
                 }
         # markTo = 500
