@@ -13,7 +13,8 @@ import requests, urllib
 from urlparse import urlparse
 from bs4 import BeautifulSoup
 from splinter import Browser
-
+import spynner
+from pyquery import PyQuery
 #from docopt import docopt
 #from pyvirtualdisplay import Display
 
@@ -44,15 +45,16 @@ class WOS(object):
         except:
             self.browser_app = "splinter"
         #using MLV Auth Server
+        
         self.auth_url = "https://apps-webofknowledge-com.fennec.u-pem.fr/%s_AdvancedSearch_input.do?&product=WOS&search_mode=AdvancedSearch" %self.product
+        print self.auth_url
         #Firefox Browser
         if self.browser_app == "splinter":
-            self.browser = Browser("firefox")
+            self.browser = Browser()
         else:
             self.browser = spynner.Browser()
             self.browser.set_html_parser(PyQuery)
         
-        #self.browser = Browser('zope.testbrowser', ignore_robots=True)
         #Session params
         self.session = None
         self.cookies = {}
@@ -72,7 +74,7 @@ class WOS(object):
             
         if self.user is None and self.passw is None:
             self.user, self.passw = private
-        logging.info("WOS search parameters:\n\t- query: %s\n\t- outfile: %s\n\t- user: %s\n\t- password: %s" %(self.query, self.outfile, self.user, self.passw))
+        logging.info("Search parameters:\n\t-product: %s \n\t- query: %s\n\t- outfile: %s\n\t- user: %s\n\t- password: %s" %(self.product, self.query, self.outfile, self.user, self.passw))
         self.run()
         
     def auth(self):
@@ -99,7 +101,7 @@ class WOS(object):
                 self.session.wait(random.uniform(1, 3))
         
         p_url = urlparse(self.browser.url)
-        
+        print p_url
         if p_url.netloc == "apps-webofknowledge-com.fennec.u-pem.fr":
             #print p_url.scheme+"//"+p_url.netloc+"/WOS_GeneralSearch_input.do?"+p_url.query
             match = re.match(re.compile("product\=(?P<product>.*?)\&search_mode\=(?P<search_mode>.*?)\&SID=(?P<ssid>.*?)\&preferencesSaved\="), str(p_url.query))
