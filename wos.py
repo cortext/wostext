@@ -248,7 +248,7 @@ class WOS(object):
     def export(self):
         """Writing results into outfile (defaut is normalized query)"""
         start_time = time.time()
-        open(self.outfile, 'w').close()
+        #open(self.outfile, 'w').close()
         l = list(range(0, self.nb_results, 500))
         l.append(self.nb_results)
     
