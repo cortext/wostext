@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python 2.7
 # -*- coding: utf-8 -*-
 
 import logging
@@ -12,11 +12,11 @@ import random, time
 import requests, urllib
 from urlparse import urlparse
 from bs4 import BeautifulSoup
-from splinter import Browser
-from  pyquery import PyQuery
-import spynner
+#~ from splinter import Browser
+#~ from  pyquery import PyQuery
+#~ import spynner
 #from docopt import docopt
-from pyvirtualdisplay import Display
+#~ from pyvirtualdisplay import Display
 
 
 class WOS(object):
